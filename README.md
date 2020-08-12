@@ -40,16 +40,34 @@ resources:
     from: 192.168.14.0/24
   - paths: ['/var/repo/backup']
     op: put
-    from: 192.168.16.233
+    from: 192.168.16.233/32
 ```
 
 In this example, `sftr` will allow a host in the 192.168.14.0/24 network to
-retrieve the hosts file, and a specific host to upload its backup.
+retrieve the hosts file, and a specific host to upload its backup.  Note the
+addresses must use full CIDR notation, and so must include `/32` for
+individual hosts.
+
+## Trying it out
+
+There are some things to watch out for when trying this out.
+
+### Disable your SSH authentication agent
+
+If you're using an SSH authentication agent, the registered identities may
+conflict with the specific key you want to use, and you'll get odd results
+(specifically, the shell failling to execute `put testfile`).  Here's a way
+around that:
+
+```
+$ SSH_AUTH_SOCK=/dev/null ssh -i ~/.ssh/test-deploy myhost put testfile
+```
 
 ## Future
 
 This is an initial release.  Planned future enhancements:
 
+* proper logging, robustness, better error checking
 * post-transfer script support
 * client and client group definitions for more readable and less error-prone
   access configuration
