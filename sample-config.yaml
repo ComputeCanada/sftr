@@ -1,0 +1,8 @@
+---
+resources:
+  - paths: ['/etc/hosts']
+    op: get
+    from: 192.168.14.0/24
+  - paths: ['/var/repo/backup']
+    op: put
+    from: 192.168.16.233

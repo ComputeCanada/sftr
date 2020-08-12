@@ -1,0 +1,4 @@
+**/*.swp
+sftr
+dist/
+go.sum
