@@ -2,7 +2,6 @@ package main
 
 import (
   "flag"
-  "log"
   "io"
   "io/ioutil"
   "os"
@@ -10,6 +9,21 @@ import (
   "strings"
   "net"
 )
+
+// --------------------------------------------------------------------------
+//                                                                constants
+// --------------------------------------------------------------------------
+
+const ERR_NO_MATCH      = 1
+const ERR_INVOCATION    = 128
+const ERR_CONFIGURATION = 129
+const ERR_FILE_OPEN     = 130
+const ERR_FILE_IO       = 131
+
+// --------------------------------------------------------------------------
+//                                                                structures
+// --------------------------------------------------------------------------
+
 
 type ClientDef struct {
   // undefined for now
@@ -26,43 +40,29 @@ type Config struct {
   Resources []ResourceDef
 }
 
-func check(e error) {
-  if e != nil {
-    log.Fatal(e)
-    os.Exit(1)
-  }
-}
-
-func sina(s string, a []string) bool {
-  for _, c := range a {
-    if c == s {
-      return true
-    }
-  }
-  return false
-}
+// --------------------------------------------------------------------------
+//                                                                main
+// --------------------------------------------------------------------------
 
 func main() {
   var config Config
 
-  log.Println("Starting sftr")
+  info("Starting sftr")
 
   // get SSH connection information
   var ssh_connection string
   var isset bool
   ssh_connection, isset = os.LookupEnv("SSH_CONNECTION")
   if !isset {
-    log.Fatal("No SSH connection information available")
-    os.Exit(1)
+    fatal(ERR_INVOCATION, "No SSH connection information available")
   }
 
   // make more robust
   from_ip := net.ParseIP(strings.Split(ssh_connection, " ")[0])
   if from_ip == nil {
-    log.Fatal("Could not parse originating IP address from SSH connection information")
-    os.Exit(1)
+    fatal(ERR_INVOCATION, "Could not parse originating IP address from SSH connection information")
   }
-  log.Printf("Coming from %s", from_ip)
+  info("Coming from %s", from_ip)
 
   // get flags
   configPtr := flag.String("config", "sftr.yaml", "config file")
@@ -72,8 +72,7 @@ func main() {
   var ssh_command string
   ssh_command, isset = os.LookupEnv("SSH_ORIGINAL_COMMAND")
   if !isset {
-    log.Fatal("No operation supplied")
-    os.Exit(1)
+    fatal(ERR_INVOCATION, "No operation supplied")
   }
 
   // split operation into op + erand
@@ -81,19 +80,18 @@ func main() {
   op := ops[0]
   path := ops[1]
   if op == "" || path == "" {
-    log.Fatal("Must specify op and path")
-    os.Exit(1)
+    fatal(ERR_INVOCATION, "Must specify op and path")
   }
-  log.Printf("op = %s, path = %s", op, path)
+  info("op = %s, path = %s", op, path)
 
   // read configuration file
   // TODO: configurable also via environment variable
   data, err := ioutil.ReadFile(*configPtr)
-  check(err)
+  check(ERR_INVOCATION, err)
 
   // unmarshal into struct
   err = yaml.UnmarshalStrict([]byte(data), &config)
-  check(err)
+  check(ERR_CONFIGURATION, err)
 
   // verify op and path match an entry
   var idx int
@@ -104,10 +102,10 @@ func main() {
 
       // parse "from" into network
       _, ipnet, err := net.ParseCIDR(resource.From)
-      check(err)
+      check(ERR_CONFIGURATION, err)
 
       // test whether client IP matches this network
-      log.Printf("Checking whether %s contains %s", ipnet, from_ip)
+      debug("Checking whether %s contains %s", ipnet, from_ip)
       if ipnet.Contains(from_ip) {
         found = true
       }
@@ -115,31 +113,37 @@ func main() {
   }
 
   if !found {
-    log.Fatal("None such, sorry")
-    os.Exit(1)
+    fatal(ERR_NO_MATCH, "No such match for %s", from_ip)
   }
 
-  log.Printf("Found matching resource at index %d", idx)
+  info("Found matching resource at index %d", idx)
 
   // now do the thing
   if op == "put" {
     // open target
-    fp, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0640) 
-    check(err)
+    fp, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0640)
+    check(ERR_FILE_OPEN, err)
+    defer func() {
+      fp.Close()
+      info("Closed target file")
+    }()
 
     // read from stdin and write to target
     _, err = io.Copy(fp, os.Stdin)
-    check(err)
+    check(ERR_FILE_IO, err)
   } else if op == "get" {
     // open source
     fp, err := os.Open(path)
-    check(err)
+    check(ERR_FILE_OPEN, err)
+    defer func() {
+      fp.Close()
+      info("Closed source file")
+    }()
 
     // read from source and write to stdout
     _, err = io.Copy(os.Stdout, fp)
-    check(err)
+    check(ERR_FILE_IO, err)
   } else {
-    log.Fatal("Unsupported operation '%s'", op)
-    os.Exit(1)
+    fatal(ERR_INVOCATION, "Unsupported operation '%s'", op)
   }
 }

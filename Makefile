@@ -1,7 +1,7 @@
 SOURCE_DIR	:= .
 OUTPUT_DIR	:= dist
 
-SOURCES		:= $(SOURCE_DIR)/sftr.go
+SOURCES		:= sftr.go helpers.go errors.go
 
 prog_x86_64	:= $(OUTPUT_DIR)/sftr_linux_x86-64
 prog_osx	:= $(OUTPUT_DIR)/sftr_osx
