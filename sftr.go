@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"os/exec"
 	"strings"
 )
 
@@ -19,6 +20,7 @@ const ERR_INVOCATION = 128
 const ERR_CONFIGURATION = 129
 const ERR_FILE_OPEN = 130
 const ERR_FILE_IO = 131
+const ERR_POSTEXEC = 132
 
 // --------------------------------------------------------------------------
 //                                                                structures
@@ -29,9 +31,11 @@ type ClientDef struct {
 }
 
 type ResourceDef struct {
-	Paths []string
-	Op    string
-	From  string
+	Paths   []string
+	Op      string
+	From    string
+	Command []string
+	Script  string
 }
 
 type Config struct {
@@ -109,6 +113,7 @@ func main() {
 			debug("Checking whether %s contains %s", ipnet, from_ip)
 			if ipnet.Contains(from_ip) {
 				found = true
+				break
 			}
 		}
 	}
@@ -132,6 +137,40 @@ func main() {
 		// read from stdin and write to target
 		_, err = io.Copy(fp, os.Stdin)
 		check(ERR_FILE_IO, err)
+
+		// if post-command specified
+		if len(resource.Command) != 0 {
+			// TODO: split this out
+			info("Found command: %s", resource.Command)
+
+			// set up command structure (split program and arguments)
+			cmd := exec.Command(resource.Command[0], resource.Command[1:]...)
+
+			// run command and get output
+			output, err := cmd.CombinedOutput()
+			check(ERR_POSTEXEC, err)
+			info("Command: %s", output)
+		} else if resource.Script != "" {
+			// TODO: split this out
+			// TODO: make shell configurable
+			cmd := exec.Command("/bin/sh")
+
+			// create input pipe for command
+			stdin, err := cmd.StdinPipe()
+			check(ERR_POSTEXEC, err)
+
+			// write to pipe
+			// from (the example)[https://golang.org/pkg/os/exec/#Cmd.StdinPipe]
+			go func() {
+				defer stdin.Close()
+				io.WriteString(stdin, resource.Script)
+			}()
+
+			// get the output
+			output, err := cmd.CombinedOutput()
+			check(ERR_POSTEXEC, err)
+			info("Script: %s", output)
+		}
 	} else if op == "get" {
 		// open source
 		fp, err := os.Open(path)

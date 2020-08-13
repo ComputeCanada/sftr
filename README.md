@@ -38,15 +38,20 @@ resources:
   - paths: ['/etc/hosts']
     op: get
     from: 192.168.14.0/24
-  - paths: ['/var/repo/backup']
+  - paths: ['/var/repo/backup/*']
     op: put
+    command: ['logger', '-t', 'backups', 'Got a backup']
     from: 192.168.16.233/32
 ```
 
 In this example, `sftr` will allow a host in the 192.168.14.0/24 network to
-retrieve the hosts file, and a specific host to upload its backup.  Note the
-addresses must use full CIDR notation, and so must include `/32` for
-individual hosts.
+retrieve the hosts file, and a specific host to upload its backup (or
+overwrite existing files in that location).  Note the addresses must use full
+CIDR notation, and so must include `/32` for individual hosts.
+
+The second operation runs a command after successful transfer.  Note this must
+be expressed as an array of strings where the first member is the program and
+the remaining members are the arguments to pass on.
 
 ## Trying it out
 
@@ -67,11 +72,13 @@ $ SSH_AUTH_SOCK=/dev/null ssh -i ~/.ssh/test-deploy myhost put testfile
 
 This is an initial release.  Planned future enhancements:
 
-* proper logging, robustness, better error checking
-* post-transfer script support
-* client and client group definitions for more readable and less error-prone
+* [ ] proper logging, robustness, better error checking
+* [x] post-transfer script support
+* [ ] client and client group definitions for more readable and less error-prone
   access configuration
-* support for patterns and/or globs in filenames, and directories
+* [ ] use of client names in resource paths
+* [x] support for patterns and/or globs in filenames
+* [ ] support for directories
 
 ## Alternatives
 
