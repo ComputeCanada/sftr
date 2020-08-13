@@ -98,7 +98,9 @@ func main() {
   var found = false
   var resource ResourceDef
   for idx, resource = range config.Resources {
-    if op == resource.Op && sina(path, resource.Paths) {
+    if op == resource.Op &&
+      (string_occurs_in_array(path, resource.Paths) ||
+        string_matches_glob_in_array(path, resource.Paths)) {
 
       // parse "from" into network
       _, ipnet, err := net.ParseCIDR(resource.From)
