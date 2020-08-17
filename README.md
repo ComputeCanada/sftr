@@ -5,7 +5,27 @@ download a file and a login account on a server running an appropriate SSH
 daemon.  Instead of needing to run another service such as FTP or allowing
 arbitrary uploads/downloads, `sftr` is invoked on behalf of a user and limits
 transfers to a specific list and specific clients, and can automatically run
-commands after transfers (coming soon).
+commands after transfers.
+
+
+## Use cases
+
+The general goal of this program is to support automated transfer of file
+resources to or from a server without exposing all files to which the
+operative account would have access.  If this is not a concern, then use of
+`scp` optionally followed by `ssh [post-command]` provides the same function.
+
+Otherwise, `sftr` provides a method of transfer with limited trust.  For
+example:
+
+* Automated archive of logs, backups and other artifacts: clients can upload
+  files to a central repository using individual or shared SSH keys tied to
+  the same user account on the repository, without having the ability to
+  overwrite files uploaded by other clients.
+
+* CI/CD: automated deployment of program and/or configuration updates to a
+  server, optionally triggering a post-transfer process, without exposing
+  other resources owned by or accessible to the associated account.
 
 ## Use with OpenSSH
 
@@ -21,7 +41,7 @@ recommended options including the `sftr` command:
 
 ```
 command="/opt/computecanada/bin/sftr --config=$HOME/.sftr",no-port-forwarding,no-X11-forwarding,no-pty ssh-ed25519
-<key> deploy-bot
+[key] deploy-bot
 ```
 
 Note this should all be a single line and the first field cannot contain any
