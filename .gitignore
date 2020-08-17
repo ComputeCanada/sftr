@@ -2,3 +2,4 @@
 sftr
 dist/
 go.sum
+.DS_Store
