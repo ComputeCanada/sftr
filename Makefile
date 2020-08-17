@@ -22,7 +22,7 @@ prog_win32	:= $(OUTPUT_DIR)/sftr_win32.exe
 prog_winx64	:= $(OUTPUT_DIR)/sftr_winx64.exe
 
 # determine version
-VERSION		:= $(shell git describe)
+VERSION		:= $(shell git describe | sed -E 's/[0-9]+-g([a-f0-9]{7})/dev-\1/g')
 
 all: $(ALL_BUILDS)
 
