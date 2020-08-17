@@ -26,7 +26,6 @@ const ERR_POSTEXEC = 132
 
 // program details
 const PROGRAM_NAME = "sftr"
-const PROGRAM_VERSION = "dev"
 const PROGRAM_USAGE = `
 Usage: sftr -help         for this help text, or
        sftr [options]
@@ -79,6 +78,7 @@ func parse_cli() Args {
 	flag.StringVar(&args.config_fn, "config", config_fn, "config file")
 
 	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), "%s version %s", PROGRAM_NAME, PROGRAM_VERSION)
 		fmt.Fprintf(flag.CommandLine.Output(), PROGRAM_USAGE)
 		flag.PrintDefaults()
 	}
@@ -175,7 +175,7 @@ func main() {
 	// get flags - first thing in case of invocation error or usage
 	args := parse_cli()
 
-	info("Starting " + PROGRAM_NAME)
+	info("Starting " + PROGRAM_NAME + " (" + PROGRAM_VERSION + ")")
 
 	// get runtime parameters from SSH environment variables
 	from, op, path := get_ssh_info()
